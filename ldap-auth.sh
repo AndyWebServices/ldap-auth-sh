@@ -123,7 +123,7 @@ ldap_auth_curl() {
 	[ -z "$DEBUG" ] || verbose="-v"
 	attrs=$(echo "$ATTRS" | sed "s/ /,/g")
 	output=$(curl $verbose -s -m "$TIMEOUT" -u "$USERDN:$password" \
-           "$SERVER/uid=$username,cn=users,cn=accounts,dc=andywebservices,dc=com?dn,cn?$SCOPE?$FILTER")
+           "$SERVER/$BASEDN?dn,$attrs?$SCOPE?$FILTER")
 	[ $? -ne 0 ] && return 1
 	return 0
 }
