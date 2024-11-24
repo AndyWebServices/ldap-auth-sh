@@ -88,14 +88,13 @@ ldap_dn_escape() {
 	[ -z "$DEBUG" ] || log "Escaped '$1' to '$escaped'."
 	echo "$escaped"
 }
-#USERDN="uid=$(ldap_dn_escape "$username"),cn=users,cn=accounts,dc=andywebservices,dc=com"
+USERDN="uid=$(ldap_dn_escape "$username"),cn=users,cn=accounts,dc=andywebservices,dc=com"
 
 # If you want to take additional checks like requiring group memberships
 # or fetch specific user attributes, you can execute a custom search, which
 # has to return exactly one result in order for authentication to succeed.
 # Uncomment the following lines to enable search query execution.
-USERDN2="uid=$username,cn=users,cn=accounts,dc=andywebservices,dc=com"
-BASEDN="$USERDN2"
+BASEDN="$USERDN"
 SCOPE="base"
 FILTER="(&(objectClass=person)(memberOf=cn=homeassistantusers,cn=groups,cn=accounts,dc=andywebservices,dc=com))"
 # Space-separated list of additional LDAP attributes to query.
@@ -124,7 +123,7 @@ ldap_auth_curl() {
 	[ -z "$DEBUG" ] || verbose="-v"
 	attrs=$(echo "$ATTRS" | sed "s/ /,/g")
 	output=$(curl $verbose -s -m "$TIMEOUT" -u "$USERDN:$password" \
-		"$SERVER/uid=$username,cn=users,cn=accounts,dc=andywebservices,dc=com?dn,cn?$SCOPE?$FILTER")
+           "$SERVER/uid=$username,cn=users,cn=accounts,dc=andywebservices,dc=com?dn,cn?$SCOPE?$FILTER")
 	[ $? -ne 0 ] && return 1
 	return 0
 }
