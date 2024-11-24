@@ -54,7 +54,7 @@
 
 # Uncomment to enable debugging to stderr (prints full client output
 # and more).
-#DEBUG=1
+DEBUG=1
 
 # Must be one of "curl" and "ldapsearch".
 # NOTE:
@@ -77,18 +77,30 @@ USERNAME_PATTERN='^[a-z|A-Z|0-9|_|-|.]+$'
 # Will try binding as this user.
 # ldap_dn_escape escapes special characters in strings to make them
 # usable within LDAP DN components.
-#USERDN="uid=$(ldap_dn_escape "$username"),ou=people,dc=example,dc=com"
+# Escape string to be safely usable in LDAP DN components and URIs.
+# https://ldapwiki.com/wiki/DN%20Escape%20Values
+ldap_dn_escape() {
+	escaped=$(echo "$1" | sed -r \
+		-e 's/[,\\#+<>;"=/?]/\\\0/g' \
+		-e 's/^ (.*)$/\\ \1/' \
+		-e 's/^(.*) $/\1\\ /' \
+	)
+	[ -z "$DEBUG" ] || log "Escaped '$1' to '$escaped'."
+	echo "$escaped"
+}
+#USERDN="uid=$(ldap_dn_escape "$username"),cn=users,cn=accounts,dc=andywebservices,dc=com"
 
 # If you want to take additional checks like requiring group memberships
 # or fetch specific user attributes, you can execute a custom search, which
 # has to return exactly one result in order for authentication to succeed.
 # Uncomment the following lines to enable search query execution.
-#BASEDN="$USERDN"
-#SCOPE="base"
-#FILTER="(&(objectClass=person)(memberOf=cn=some-group,ou=groups,dc=example,dc=com))"
+USERDN2="uid=$username,cn=users,cn=accounts,dc=andywebservices,dc=com"
+BASEDN="$USERDN2"
+SCOPE="base"
+FILTER="(&(objectClass=person)(memberOf=cn=homeassistantusers,cn=groups,cn=accounts,dc=andywebservices,dc=com))"
 # Space-separated list of additional LDAP attributes to query.
 # You could process them in your own on_auth_success hook.
-#ATTRS="cn"
+ATTRS="cn"
 
 # When the timeout (in seconds) is exceeded (e.g. due to slow networking),
 # authentication fails.
@@ -105,17 +117,6 @@ log() {
 }
 
 
-# Escape string to be safely usable in LDAP DN components and URIs.
-# https://ldapwiki.com/wiki/DN%20Escape%20Values
-ldap_dn_escape() {
-	escaped=$(echo "$1" | sed -r \
-		-e 's/[,\\#+<>;"=/?]/\\\0/g' \
-		-e 's/^ (.*)$/\\ \1/' \
-		-e 's/^(.*) $/\1\\ /' \
-	)
-	[ -z "$DEBUG" ] || log "Escaped '$1' to '$escaped'."
-	echo "$escaped"
-}
 
 
 # The different client implementations.
@@ -123,7 +124,7 @@ ldap_auth_curl() {
 	[ -z "$DEBUG" ] || verbose="-v"
 	attrs=$(echo "$ATTRS" | sed "s/ /,/g")
 	output=$(curl $verbose -s -m "$TIMEOUT" -u "$USERDN:$password" \
-		"$SERVER/$BASEDN?dn,$attrs?$SCOPE?$FILTER")
+		"$SERVER/uid=$username,cn=users,cn=accounts,dc=andywebservices,dc=com?dn,cn?$SCOPE?$FILTER")
 	[ $? -ne 0 ] && return 1
 	return 0
 }
